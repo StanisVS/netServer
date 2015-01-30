@@ -38,11 +38,16 @@ public class InputProcessor {
             obj.put("data", reversed);
         }
         obj.put("status", status);
+        if(!status){
+            System.err.println("failed response!");
+        }
         StringWriter out = new StringWriter();
         JSONValue.writeJSONString(obj, out);
         String jsonText = out.toString() + "\n";
 //        System.out.println("send to output " + jsonText);
         jsonText.hashCode(); //just for delay
+        jsonText.hashCode();
+        jsonText.hashCode();
         return ByteBuffer.wrap(jsonText.getBytes());
     }
 
