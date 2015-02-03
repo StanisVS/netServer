@@ -44,11 +44,22 @@ public class InputProcessor {
         StringWriter out = new StringWriter();
         JSONValue.writeJSONString(obj, out);
         String jsonText = out.toString() + "\n";
-//        System.out.println("send to output " + jsonText);
-        jsonText.hashCode(); //just for delay
-        jsonText.hashCode();
-        jsonText.hashCode();
+        fib(40);
         return ByteBuffer.wrap(jsonText.getBytes());
+    }
+
+    int fib(int n)
+    {
+        if (n == 0) { return 0; }
+        else
+        {
+            if ((n == -1) || (n == 1)) { return 1; }
+            else
+            {
+                if (n > 0) { return fib(n - 1) + fib(n - 2); }
+                else { return fib(n + 2) - fib(n + 1); }
+            }
+        }
     }
 
 
