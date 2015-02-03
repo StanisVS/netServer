@@ -12,6 +12,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MyClient implements Callable<Long> {
 
@@ -24,8 +25,10 @@ public class MyClient implements Callable<Long> {
     private final int messageSize;
     private final int messageCount;
     private final Socket socket;
+    private final AtomicBoolean barrier;
 
-    public MyClient(String ipAddr, int port, int messageSize, int messageCount) throws IOException {
+    public MyClient(String ipAddr, int port, int messageSize, int messageCount, AtomicBoolean barrier) throws IOException {
+        this.barrier = barrier;
         InetAddress address = InetAddress.getByName(ipAddr);
         //connect socket
         socket = new Socket(address, port);
@@ -74,15 +77,17 @@ public class MyClient implements Callable<Long> {
     public static void runTest(int clientsCount, int messageSize, int messageCount, String ipAddress, int port) {
         ExecutorService threadPool = Executors.newFixedThreadPool(clientsCount);
         Collection<Future<Long>> result = new LinkedList<Future<Long>>();
+        AtomicBoolean barrier = new AtomicBoolean(true);
         for (int i = 0; i < clientsCount; ++i) {
             try {
-                final MyClient myClient = new MyClient(ipAddress, port, messageSize, messageCount);
+                final MyClient myClient = new MyClient(ipAddress, port, messageSize, messageCount, barrier);
                 result.add(threadPool.submit(myClient));
             } catch (IOException e) {
                 System.err.println("Failed to connect client number " + i);
                 e.printStackTrace();
             }
         }
+        barrier.set(false);
         threadPool.shutdown();
         long totalTime = 0;
         int totalClients = 0;
@@ -122,6 +127,7 @@ public class MyClient implements Callable<Long> {
 
     @Override
     public Long call() throws Exception {
+        while (barrier.get()) {}
         long sum = 0;
         List<Long> responseTimes = new LinkedList<Long>();
         if (!socket.isConnected()) {
