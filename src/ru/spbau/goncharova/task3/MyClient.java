@@ -46,7 +46,7 @@ public class MyClient implements Callable<Long> {
             writer.flush();
             //accept response
             responseString = reader.readLine();
-            long afterRequestTime = System.currentTimeMillis();
+            long afterRequestTime = System.nanoTime();
             long responseTime = afterRequestTime - beforeRequestTime;
             JSONParser parser = new JSONParser();
             JSONObject response = (JSONObject) parser.parse(responseString);
@@ -114,7 +114,7 @@ public class MyClient implements Callable<Long> {
             final int messageCount = Integer.parseInt(args[2]);
             final String ipAddress = args[3];
             final int port = Integer.parseInt(args[4]);
-            for (int i = clientCount; i < 10000; i += 150) {
+            for (int i = clientCount; i < 500; i += 10) {
                 runTest(i, messageSize, messageCount, ipAddress, port);
             }
         }
@@ -127,10 +127,10 @@ public class MyClient implements Callable<Long> {
         if (!socket.isConnected()) {
             System.err.println("not connected socket");
         }
-        long beforeRequestTime = System.currentTimeMillis();
-        String mssg = generateMessage(messageSize);
+        long beforeRequestTime = System.nanoTime();
         //receive all responses
         for (int i = 0; i < messageCount; ++i) {
+            String mssg = generateMessage(messageSize);
             ProcessingResult pRes = processMessage(mssg, beforeRequestTime);
             if (pRes.isOk()) {
                 sum += pRes.responseTime;
@@ -138,7 +138,7 @@ public class MyClient implements Callable<Long> {
                 //measure time between subsequent read operations so that there are no holes in client execution that are not covered by time measurements
                 beforeRequestTime += pRes.responseTime;
             } else {
-                beforeRequestTime = System.currentTimeMillis();
+                beforeRequestTime = System.nanoTime();
             }
         }
         socket.close();
