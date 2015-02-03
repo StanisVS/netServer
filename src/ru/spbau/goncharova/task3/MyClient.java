@@ -36,12 +36,11 @@ public class MyClient implements Callable<Long> {
 
     }
 
-    public ProcessingResult processMessage(String message) {
+    public ProcessingResult processMessage(String message, long beforeRequestTime) {
         JSONObject object = new JSONObject();
         object.put(dataId, message);
         String responseString = null;
         try {
-            long beforeRequestTime = System.currentTimeMillis();
             //send request
             writer.write(object.toJSONString() + "endl");
             writer.flush();
@@ -128,13 +127,18 @@ public class MyClient implements Callable<Long> {
         if (!socket.isConnected()) {
             System.err.println("not connected socket");
         }
+        long beforeRequestTime = System.currentTimeMillis();
         String mssg = generateMessage(messageSize);
         //receive all responses
         for (int i = 0; i < messageCount; ++i) {
-            ProcessingResult pRes = processMessage(mssg);
+            ProcessingResult pRes = processMessage(mssg, beforeRequestTime);
             if (pRes.isOk()) {
                 sum += pRes.responseTime;
                 responseTimes.add(pRes.responseTime);
+                //measure time between subsequent read operations so that there are no holes in client execution that are not covered by time measurements
+                beforeRequestTime += pRes.responseTime;
+            } else {
+                beforeRequestTime = System.currentTimeMillis();
             }
         }
         socket.close();
