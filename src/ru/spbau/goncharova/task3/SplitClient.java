@@ -7,6 +7,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class SplitClient extends Client implements Callable<Integer> {
 
@@ -16,10 +17,12 @@ public class SplitClient extends Client implements Callable<Integer> {
     private final ExecutorService threadPool;
     private final LinkedList<Long> responseTimes = new LinkedList<Long>();
     private long startTime = -1;
+    private final AtomicInteger finishedClients;
 
-    public SplitClient(String ipAddr, int port, int messageSize, int messageCount, ExecutorService threadPool) throws IOException {
+    public SplitClient(String ipAddr, int port, int messageSize, int messageCount, ExecutorService threadPool, AtomicInteger atomicInteger) throws IOException {
         super(ipAddr, port, messageSize, messageCount);
         this.threadPool = threadPool;
+        this.finishedClients = atomicInteger;
     }
 
     @Override
@@ -56,16 +59,19 @@ public class SplitClient extends Client implements Callable<Integer> {
         isWrite = !isWrite;
         if (currentMessageCount < messageCount) {
             threadPool.submit(this);
+        } else {
+            finishedClients.incrementAndGet();
         }
         return 0;
     }
 
-    public static void runTest(int clientsCount, int messageSize, int messageCount, String ipAddress, int port) {
+    public static void runTest(int clientsCount, int messageSize, int messageCount, String ipAddress, int port) throws InterruptedException {
         ExecutorService threadPool = Executors.newFixedThreadPool(clientsCount);
         SplitClient[] clients = new SplitClient[clientsCount];
+        AtomicInteger waiter = new AtomicInteger(0);
         for (int i = 0; i < clientsCount; ++i) {
             try {
-                final SplitClient myClient = new SplitClient(ipAddress, port, messageSize, messageCount, threadPool);
+                final SplitClient myClient = new SplitClient(ipAddress, port, messageSize, messageCount, threadPool, waiter);
                 clients[i] = myClient;
                 threadPool.submit(myClient);
             } catch (IOException e) {
@@ -73,6 +79,9 @@ public class SplitClient extends Client implements Callable<Integer> {
                 e.printStackTrace();
             }
         }
+//        threadPool.awaitTermination(100, TimeUnit.DAYS);
+//        threadPool.shutdown();
+        while (waiter.get() < clientsCount) {}
         threadPool.shutdown();
         int successfulClients = 0;
         long sum = 0;
@@ -85,7 +94,7 @@ public class SplitClient extends Client implements Callable<Integer> {
         System.out.println(successfulClients + "," + sum / successfulClients);
     }
 
-    public static void main(String[] args) throws FileNotFoundException {
+    public static void main(String[] args) throws FileNotFoundException, InterruptedException {
         if (args.length < 5) {
             System.out.println("Not enough arguments.");
             System.out.println("Usage: MyClient clientsCount messageLength messagesCount ipAddress port");

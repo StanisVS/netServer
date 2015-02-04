@@ -44,7 +44,7 @@ public class InputProcessor {
         StringWriter out = new StringWriter();
         JSONValue.writeJSONString(obj, out);
         String jsonText = out.toString() + "\n";
-        fib(40);
+        fib(20);
         return ByteBuffer.wrap(jsonText.getBytes());
     }
 
